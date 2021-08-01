@@ -94,6 +94,7 @@ class StockScheduling : CommandLineRunner {
 
     override fun run(vararg args: String?) {
         buildStoreList()
+        log.info("finish")
     }
 
     fun query(url: String): Document {
