@@ -40,7 +40,7 @@ allprojects {
 
     rootProject.extra.set("vers", vers)
     rootProject.extra.set("docker_registry", "192.168.1.254:5000")
-    rootProject.extra.set("docker_host", "192.168.1.254")
+    rootProject.extra.set("docker_host", "192.168.1.254:2376")
 
     dependencies {
         implementation("org.springframework.boot:spring-boot-starter")
@@ -73,8 +73,8 @@ allprojects {
                 password = pwd
                 isAllowInsecureProtocol = true
             }
-//            url = uri("http://192.168.1.254:8081/repository/maven-group/")
-            url = uri("http://172.16.11.231:8081/nexus/repository/maven2-group/")
+            url = uri("http://192.168.1.254:8081/repository/maven-group/")
+//            url = uri("http://172.16.11.231:8081/nexus/repository/maven2-group/")
         }
     }
 

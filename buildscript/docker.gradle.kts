@@ -12,6 +12,10 @@ task("docker") {
             into(app)
             rename(appName, "app.jar")
         }
+        copy {
+            from(rootProject.file("driver"))
+            into(File(app, "driver"))
+        }
 
         println("cp Dockerfile")
         copy {
@@ -55,6 +59,9 @@ task("docker") {
             binding
         )
 
+        exec {
+            commandLine("chmod", "777", File(rootProject.buildDir, "package/app/run.sh"))
+        }
         exec {
             commandLine(File(rootProject.buildDir, "package/app/run.sh"))
         }

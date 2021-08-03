@@ -5,4 +5,4 @@ fun defineSubProject(name: String, path: String) {
     project(":$name").projectDir = file(path)
 }
 
-defineSubProject("app", "app")
+defineSubProject("stock-app", "app")
