@@ -9,6 +9,7 @@ import org.openqa.selenium.chrome.ChromeOptions
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -85,7 +86,7 @@ class StockScheduling : CommandLineRunner {
         val items0 = doc.select("#other .gnContent tbody tr")
         items0.forEach { element ->
             val name = element.select("td.gnStockList").text()
-            if(name.isEmpty())
+            if (name.isEmpty())
                 return@forEach
             val conceptCode = element.select("td.gnStockList").attr("cid")
             map[conceptCode] = element.select("div.tdContent").text()
@@ -103,7 +104,7 @@ class StockScheduling : CommandLineRunner {
     }
 
     @Transactional
-    private fun saveConcepts(concepts: List<Concept>) {
+    fun saveConcepts(concepts: List<Concept>) {
         concepts.forEach { c ->
             val exists =
                 jpaQueryFactory.from(QConcept.concept).where(QConcept.concept.code.eq(c.code)).fetchOne() as Concept?
@@ -118,7 +119,8 @@ class StockScheduling : CommandLineRunner {
     }
 
     @Transactional
-    private fun buildStockConceptRefs(code: String, map: Map<String, String>) {
+    @Modifying
+    fun buildStockConceptRefs(code: String, map: Map<String, String>) {
         jpaQueryFactory.delete(QStockConceptRef.stockConceptRef)
             .where(QStockConceptRef.stockConceptRef.stockCode.eq(code))
             .execute()
@@ -247,7 +249,8 @@ class StockScheduling : CommandLineRunner {
         options.addArguments("--disable-blink-features=AutomationControlled")
         options.addArguments("--disable-extensions")
         options.addArguments("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36")
-        options.addArguments("--headless")
+        options.addArguments("blink-settings=imagesEnabled=false")
+//        options.addArguments("--headless")
         val driver = ChromeDriver(options)
         driver.get(url)
         val result = driver.pageSource
@@ -260,9 +263,8 @@ class StockScheduling : CommandLineRunner {
         private val OS_NAME = System.getProperty("os.name").lowercase()
     }
 
-    @Transactional
     override fun run(vararg args: String?) {
-        buildStoreList()
+//        buildStoreList()
         buildConcepts()
     }
 
