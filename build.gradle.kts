@@ -4,6 +4,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 plugins {
     id("org.springframework.boot") version "2.4.6"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
+    id("java")
     kotlin("jvm") version "1.5.0"
     kotlin("plugin.spring") version "1.5.0"
     kotlin("plugin.jpa") version "1.5.0"
@@ -14,6 +15,7 @@ allprojects {
 
     apply {
         plugin("idea")
+        plugin("java")
         plugin("org.springframework.boot")
         plugin("io.spring.dependency-management")
         plugin("kotlin")
@@ -43,11 +45,9 @@ allprojects {
     dependencies {
         implementation("org.springframework.boot:spring-boot-starter")
         implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
-        implementation("org.slf4j:slf4j-ext")
         implementation("commons-io:commons-io:${vers["commons_io"]}")
         implementation("commons-codec:commons-codec:${vers["commons_codec"]}")
         implementation("org.apache.commons:commons-lang3:${vers["commons_lang"]}")
-        implementation("org.springframework.boot:spring-boot-starter-log4j2")
 
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
         implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -59,15 +59,7 @@ allprojects {
 
         testImplementation("org.springframework.boot:spring-boot-starter-test")
         testImplementation("junit:junit")
-        testImplementation("org.springframework.boot:spring-boot-starter-log4j2")
 
-    }
-
-    configurations {
-        all {
-            exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
-            exclude(module = "slf4j-log4j12")
-        }
     }
 
     val user = System.getProperty("repoUser")

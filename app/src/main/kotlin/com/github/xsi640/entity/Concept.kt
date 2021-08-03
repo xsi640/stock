@@ -11,16 +11,10 @@ import javax.persistence.*
 @Table
 class Concept(
     @Id
-    @SequenceGenerator(name = "concept_id_seq", sequenceName = "concept_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "concept_id_seq")
-    @Column(name = "id")
-    var id: Long = 0,
-    var name: String = "",
     var code: String = "",
+    var name: String = "",
     @Convert(converter = FaucetConverter::class)
     var faucet: List<Faucet> = emptyList(),
-    @Column(columnDefinition = "TEXT")
-    var summary: String = ""
 )
 
 class Faucet(
@@ -46,6 +40,4 @@ class FaucetConverter : AttributeConverter<List<Faucet>, String> {
     }
 }
 
-interface ConceptRepository : JpaRepository<Concept, Long> {
-    fun findByCode(code: String): Optional<Concept>
-}
+interface ConceptRepository : JpaRepository<Concept, Long>

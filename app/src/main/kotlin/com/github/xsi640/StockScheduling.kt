@@ -1,6 +1,7 @@
 package com.github.xsi640
 
 import com.github.xsi640.entity.*
+import com.querydsl.jpa.impl.JPAQueryFactory
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.openqa.selenium.chrome.ChromeDriver
@@ -8,16 +9,15 @@ import org.openqa.selenium.chrome.ChromeOptions
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.sql.Date
-import java.time.LocalDate
 import java.util.*
 
 
 @Component
-class StockScheduling {
+class StockScheduling : CommandLineRunner {
 
     val StoreListUrl = "https://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{pageIndex}/ajax/1"
     val StoreDetailUrl = "http://basic.10jqka.com.cn/{code}/concept.html"
@@ -33,6 +33,9 @@ class StockScheduling {
 
     @Autowired
     private lateinit var stockConceptRefRepository: StockConceptRefRepository
+
+    @Autowired
+    private lateinit var jpaQueryFactory: JPAQueryFactory
 
     @Scheduled(cron = "0 0 22 ? * *")
     fun run() {
@@ -52,61 +55,84 @@ class StockScheduling {
         }
     }
 
-    @Transactional
     private fun parseConcept(url: String, code: String) {
         val concepts = mutableListOf<Concept>()
         val doc = query(url)
         val items = doc.select("#concept .gnContent tbody tr")
+        val map = mutableMapOf<String, String>()
         items.forEach { element ->
             val nameElement = element.select("td.gnName")
             val name = nameElement.text()
+            if (name.isEmpty())
+                return@forEach
             val conceptCode = nameElement.attr("clid")
             val faucets = mutableListOf<Faucet>()
             val faucetElements = element.select("a.gnltg")
             faucetElements.forEach { link ->
-                val n = link.`val`()
+                val n = link.text()
                 val c = link.attr("code")
                 faucets.add(Faucet(c, n))
             }
-            val summary = element.select("tr.extend_content").text()
+            map[conceptCode] = element.select("div.tdContent").text()
 
             concepts.add(
                 Concept(
                     name = name,
                     code = conceptCode,
                     faucet = faucets,
-                    summary = summary
                 )
             )
         }
         val items0 = doc.select("#other .gnContent tbody tr")
         items0.forEach { element ->
             val name = element.select("td.gnStockList").text()
+            if(name.isEmpty())
+                return@forEach
             val conceptCode = element.select("td.gnStockList").attr("cid")
-            val summary = element.select(".tdContent").text()
+            map[conceptCode] = element.select("div.tdContent").text()
 
             concepts.add(
                 Concept(
                     code = conceptCode,
                     name = name,
-                    summary = summary
                 )
             )
         }
+
+        saveConcepts(concepts)
+        buildStockConceptRefs(code, map)
+    }
+
+    @Transactional
+    private fun saveConcepts(concepts: List<Concept>) {
         concepts.forEach { c ->
-            val optional = conceptRepository.findByCode(c.code)
-            if (optional.isPresent) {
-                val exists = optional.get()
+            val exists =
+                jpaQueryFactory.from(QConcept.concept).where(QConcept.concept.code.eq(c.code)).fetchOne() as Concept?
+            if (exists != null) {
                 exists.name = c.name
                 exists.faucet = c.faucet
-                exists.summary = c.summary
                 conceptRepository.save(exists)
             } else {
                 conceptRepository.save(c)
             }
         }
+    }
 
-//        stockConceptRefRepository.find
+    @Transactional
+    private fun buildStockConceptRefs(code: String, map: Map<String, String>) {
+        jpaQueryFactory.delete(QStockConceptRef.stockConceptRef)
+            .where(QStockConceptRef.stockConceptRef.stockCode.eq(code))
+            .execute()
+        val list = map.map { (k, v) ->
+            StockConceptRef(
+                stockCode = code,
+                conceptCode = k,
+                summary = v
+            )
+        }
+        if (list.isNotEmpty()) {
+            stockConceptRefRepository.saveAll(list)
+        }
     }
 
     private fun buildStoreList() {
@@ -127,11 +153,10 @@ class StockScheduling {
             val tds = element.select("td")
             val code = tds[1].text()
             val name = tds[2].text()
-            val exists = stockRepository.findByCode(code)
-            if (exists.isPresent) {
-                val s = exists.get()
-                s.name = name
-                s
+            val exists = jpaQueryFactory.from(QStock.stock).where(QStock.stock.code.eq(code)).fetchOne() as Stock?
+            if (exists != null) {
+                exists.name = name
+                exists
             } else {
                 Stock(
                     code = code,
@@ -208,9 +233,15 @@ class StockScheduling {
     fun request(url: String): String {
         val props = System.getProperties()
         val current = System.getProperty("user.dir")
+        val driverPath = when (getOSName()) {
+            EPlatform.LINUX -> "$current/driver/linux/chromedriver"
+            EPlatform.MAC -> "$current/driver/mac64/chromedriver"
+            EPlatform.WINDOWS -> "$current/driver/win32/chromedriver.exe"
+            else -> throw IllegalArgumentException()
+        }
         props.setProperty(
             "webdriver.chrome.driver",
-            "$current/driver/mac64/chromedriver"
+            driverPath
         )
         val options = ChromeOptions()
         options.addArguments("--incognito")
@@ -227,5 +258,27 @@ class StockScheduling {
 
     companion object {
         val log = LoggerFactory.getLogger(this::class.java)
+        private val OS_NAME = System.getProperty("os.name").lowercase()
+    }
+
+    @Transactional
+    override fun run(vararg args: String?) {
+        buildStoreList()
+        buildConcepts()
+    }
+
+    fun getOSName(): EPlatform {
+        if (OS_NAME.contains("windows")) {
+            return EPlatform.WINDOWS
+        } else if (OS_NAME.contains("mac")) {
+            return EPlatform.MAC
+        } else if (OS_NAME.contains("linux")) {
+            return EPlatform.LINUX
+        }
+        return EPlatform.OTHERS
+    }
+
+    enum class EPlatform {
+        WINDOWS, MAC, LINUX, OTHERS
     }
 }

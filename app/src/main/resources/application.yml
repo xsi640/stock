@@ -4,12 +4,17 @@ logging:
     com.example: DEBUG
 spring:
   datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://192.168.1.254:5432/stock
-    username: postgres
-    password: postgres
+#    driver-class-name: org.postgresql.Driver
+    driver-class-name: org.h2.Driver
+#    url: jdbc:postgresql://192.168.1.254:5432/stock
+    url: jdbc:h2:file:~/h2/demo
+    username: sa
+    password:
+#    username: postgres
+#    password: postgres
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+#    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    database-platform: org.hibernate.dialect.H2Dialect
     show-sql: true
     hibernate:
       ddl-auto: update

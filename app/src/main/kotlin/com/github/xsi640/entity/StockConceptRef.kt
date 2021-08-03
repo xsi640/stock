@@ -6,9 +6,9 @@ import javax.persistence.*
 @Entity
 @Table(
     indexes = [Index(
-        name = "idx_stock_concept_ref_stock_id",
-        columnList = "stockId"
-    ), Index(name = "idx_stock_concept_ref_concept_id", columnList = "conceptId")]
+        name = "idx_stock_concept_ref_stock_code",
+        columnList = "stockCode"
+    ), Index(name = "idx_stock_concept_ref_concept_code", columnList = "conceptCode")]
 )
 class StockConceptRef(
     @Id
@@ -16,13 +16,11 @@ class StockConceptRef(
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "stock_concept_ref_id_seq")
     @Column(name = "id")
     var id: Long = 0,
-    var stockId: Long = 0,
-    var conceptId: Long = 0,
+    var stockCode: String = "",
+    var conceptCode: String = "",
     @Lob
     @Column(columnDefinition = "TEXT")
     var summary: String = ""
 )
 
-interface StockConceptRefRepository : JpaRepository<StockConceptRef, Long> {
-    fun findByStockId(stockId: Long): List<StockConceptRef>
-}
+interface StockConceptRefRepository : JpaRepository<StockConceptRef, Long>
