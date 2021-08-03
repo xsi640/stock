@@ -17,10 +17,10 @@ import java.util.*
 
 
 @Component
-class StockScheduling : CommandLineRunner {
+class StockScheduling {
 
     val StoreListUrl = "https://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{pageIndex}/ajax/1"
-    val StoreDetail = "http://basic.10jqka.com.cn/{code}/concept.html"
+    val StoreDetailUrl = "http://basic.10jqka.com.cn/{code}/concept.html"
 
     @Autowired
     private lateinit var stockRepository: StockRepository
@@ -36,6 +36,77 @@ class StockScheduling : CommandLineRunner {
 
     @Scheduled(cron = "0 0 22 ? * *")
     fun run() {
+        if (isWeekend()) {
+            return
+        }
+        buildStoreList()
+        buildConcepts()
+        log.info("finish")
+    }
+
+    private fun buildConcepts() {
+        stockRepository.findAll().forEach { stock ->
+            val code = stock.code
+            val url = StoreDetailUrl.replace("{code}", code)
+            parseConcept(url, stock.code)
+        }
+    }
+
+    @Transactional
+    private fun parseConcept(url: String, code: String) {
+        val concepts = mutableListOf<Concept>()
+        val doc = query(url)
+        val items = doc.select("#concept .gnContent tbody tr")
+        items.forEach { element ->
+            val nameElement = element.select("td.gnName")
+            val name = nameElement.text()
+            val conceptCode = nameElement.attr("clid")
+            val faucets = mutableListOf<Faucet>()
+            val faucetElements = element.select("a.gnltg")
+            faucetElements.forEach { link ->
+                val n = link.`val`()
+                val c = link.attr("code")
+                faucets.add(Faucet(c, n))
+            }
+            val summary = element.select("tr.extend_content").text()
+
+            concepts.add(
+                Concept(
+                    name = name,
+                    code = conceptCode,
+                    faucet = faucets,
+                    summary = summary
+                )
+            )
+        }
+        val items0 = doc.select("#other .gnContent tbody tr")
+        items0.forEach { element ->
+            val name = element.select("td.gnStockList").text()
+            val conceptCode = element.select("td.gnStockList").attr("cid")
+            val summary = element.select(".tdContent").text()
+
+            concepts.add(
+                Concept(
+                    code = conceptCode,
+                    name = name,
+                    summary = summary
+                )
+            )
+        }
+        concepts.forEach { c ->
+            val optional = conceptRepository.findByCode(c.code)
+            if (optional.isPresent) {
+                val exists = optional.get()
+                exists.name = c.name
+                exists.faucet = c.faucet
+                exists.summary = c.summary
+                conceptRepository.save(exists)
+            } else {
+                conceptRepository.save(c)
+            }
+        }
+
+//        stockConceptRefRepository.find
     }
 
     private fun buildStoreList() {
@@ -85,16 +156,11 @@ class StockScheduling : CommandLineRunner {
                 tradable = tds[11].text().toPrice(),
                 market = tds[12].text().toPrice(),
                 pe = tds[13].text().toPrice(),
-                time = Date.valueOf(LocalDate.now().minusDays(2))
+                time = Date()
             )
             price
         }
         priceRepository.saveAll(prices)
-    }
-
-    override fun run(vararg args: String?) {
-        buildStoreList()
-        log.info("finish")
     }
 
     fun query(url: String): Document {
@@ -128,26 +194,15 @@ class StockScheduling : CommandLineRunner {
         }
     }
 
-    fun Date.isWeekend(): Boolean {
+    fun isWeekend(): Boolean {
         val c = Calendar.getInstance()
-        c.time = this
+        c.time = Date()
         if (c.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
             c.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
         ) {
             return true
         }
         return false
-    }
-
-    fun Int.generateRandomString(): String {
-        val str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".toCharArray()
-        val random = Random()
-        val sb = StringBuilder()
-        for (i in 0 until this) {
-            val n = random.nextInt(str.size)
-            sb.append(str[n])
-        }
-        return sb.toString()
     }
 
     fun request(url: String): String {

@@ -4,7 +4,12 @@ import org.springframework.data.jpa.repository.JpaRepository
 import javax.persistence.*
 
 @Entity
-@Table(indexes = [Index(name = "idx_stock_concept_ref_stock_id", columnList = "stockId"),Index(name = "idx_stock_concept_ref_concept_id", columnList = "conceptId")])
+@Table(
+    indexes = [Index(
+        name = "idx_stock_concept_ref_stock_id",
+        columnList = "stockId"
+    ), Index(name = "idx_stock_concept_ref_concept_id", columnList = "conceptId")]
+)
 class StockConceptRef(
     @Id
     @SequenceGenerator(name = "stock_concept_ref_id_seq", sequenceName = "stock_concept_ref_id_seq", allocationSize = 1)
@@ -18,4 +23,6 @@ class StockConceptRef(
     var summary: String = ""
 )
 
-interface StockConceptRefRepository : JpaRepository<StockConceptRef, Long>
+interface StockConceptRefRepository : JpaRepository<StockConceptRef, Long> {
+    fun findByStockId(stockId: Long): List<StockConceptRef>
+}
