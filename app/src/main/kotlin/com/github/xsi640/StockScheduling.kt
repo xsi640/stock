@@ -119,11 +119,13 @@ class StockScheduling : CommandLineRunner {
     }
 
     @Transactional
-    @Modifying
     fun buildStockConceptRefs(code: String, map: Map<String, String>) {
-        jpaQueryFactory.delete(QStockConceptRef.stockConceptRef)
-            .where(QStockConceptRef.stockConceptRef.stockCode.eq(code))
-            .execute()
+        val lists = jpaQueryFactory.from(QStockConceptRef.stockConceptRef)
+            .where(QStockConceptRef.stockConceptRef.stockCode.eq(code)).fetch()
+                as List<StockConceptRef>
+        if (lists.isNotEmpty()) {
+            stockConceptRefRepository.deleteAll(lists)
+        }
         val list = map.map { (k, v) ->
             StockConceptRef(
                 stockCode = code,
@@ -264,7 +266,7 @@ class StockScheduling : CommandLineRunner {
     }
 
     override fun run(vararg args: String?) {
-//        buildStoreList()
+        buildStoreList()
         buildConcepts()
     }
 
