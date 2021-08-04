@@ -6,13 +6,16 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
+import org.openqa.selenium.remote.RemoteWebDriver
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.net.URL
 import java.util.*
 
 
@@ -36,6 +39,9 @@ class StockScheduling : CommandLineRunner {
 
     @Autowired
     private lateinit var jpaQueryFactory: JPAQueryFactory
+
+    @Value("\${stock.selenium.driver}")
+    private var seleniumDriverUrl: String = ""
 
     @Scheduled(cron = "0 0 22 ? * *")
     fun run() {
@@ -234,26 +240,17 @@ class StockScheduling : CommandLineRunner {
     }
 
     fun request(url: String): String {
-        val props = System.getProperties()
-        val current = System.getProperty("user.dir")
-        val driverPath = when (getOSName()) {
-            EPlatform.LINUX -> "$current/driver/linux/chromedriver"
-            EPlatform.MAC -> "$current/driver/mac64/chromedriver"
-            EPlatform.WINDOWS -> "$current/driver/win32/chromedriver.exe"
-            else -> throw IllegalArgumentException()
+        if (seleniumDriverUrl.isEmpty()) {
+            throw IllegalArgumentException("can't found selenium driver url.")
         }
-        props.setProperty(
-            "webdriver.chrome.driver",
-            driverPath
-        )
         val options = ChromeOptions()
         options.addArguments("--incognito")
         options.addArguments("--disable-blink-features=AutomationControlled")
         options.addArguments("--disable-extensions")
         options.addArguments("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36")
         options.addArguments("blink-settings=imagesEnabled=false")
-//        options.addArguments("--headless")
-        val driver = ChromeDriver(options)
+        options.addArguments("--headless")
+        val driver = RemoteWebDriver(URL(seleniumDriverUrl), options)
         driver.get(url)
         val result = driver.pageSource
         driver.quit()
