@@ -9,6 +9,7 @@ docker rmi -f ${docker_image} || true
 docker run --name='${app_name}' -d \
 --restart=always \
 -v /etc/localtime:/etc/localtime \
+-e ACTIVE=${active} \
 --network net-local \
 --network-alias ${app_name} \
 ${docker_image}

@@ -4,14 +4,12 @@ import com.github.xsi640.entity.*
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
-import org.springframework.data.jpa.repository.Modifying
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional

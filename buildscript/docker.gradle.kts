@@ -51,7 +51,8 @@ task("docker") {
         val binding = mapOf(
             "docker_image" to "$dockerRegistry/${rootProject.name}-app:${rootProject.version}",
             "docker_host" to dockerHost,
-            "app_name" to "${rootProject.name}-app"
+            "app_name" to "${rootProject.name}-app",
+            "active" to "prod"
         )
         buildTemplateFile(
             rootProject.file("buildscript/app/run.sh"),
