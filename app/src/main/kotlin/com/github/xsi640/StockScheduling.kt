@@ -18,7 +18,7 @@ import java.util.*
 
 
 @Component
-class StockScheduling : CommandLineRunner {
+class StockScheduling {
 
     val StoreListUrl = "https://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{pageIndex}/ajax/1"
     val StoreDetailUrl = "http://basic.10jqka.com.cn/{code}/concept.html"
@@ -41,7 +41,7 @@ class StockScheduling : CommandLineRunner {
     @Value("\${stock.selenium.driver}")
     private var seleniumDriverUrl: String = ""
 
-    @Scheduled(cron = "0 0 22 ? * *")
+    @Scheduled(cron = "0 0 22 * * ?")
     fun run() {
         if (isWeekend()) {
             return
@@ -258,11 +258,6 @@ class StockScheduling : CommandLineRunner {
     companion object {
         val log = LoggerFactory.getLogger(this::class.java)
         private val OS_NAME = System.getProperty("os.name").lowercase()
-    }
-
-    override fun run(vararg args: String?) {
-        buildStoreList()
-        buildConcepts()
     }
 
     fun getOSName(): EPlatform {
