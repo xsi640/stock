@@ -2,6 +2,8 @@ package com.github.xsi640
 
 import com.github.xsi640.entity.*
 import com.querydsl.jpa.impl.JPAQueryFactory
+import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.openqa.selenium.chrome.ChromeOptions
@@ -9,11 +11,13 @@ import org.openqa.selenium.remote.RemoteWebDriver
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.CommandLineRunner
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.io.File
+import java.math.BigInteger
 import java.net.URL
+import java.security.MessageDigest
 import java.util.*
 
 
@@ -21,7 +25,7 @@ import java.util.*
 class StockScheduling {
 
     val StoreListUrl = "https://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{pageIndex}/ajax/1"
-    val StoreDetailUrl = "http://basic.10jqka.com.cn/{code}/concept.html"
+    val StoreDetailUrl = "https://basic.10jqka.com.cn/{code}/concept.html"
 
     @Autowired
     private lateinit var stockRepository: StockRepository
@@ -43,7 +47,7 @@ class StockScheduling {
 
     @Scheduled(cron = "0 0 22 * * ?")
     fun run() {
-        if (isWeekend()) {
+        if (isRestDay()) {
             return
         }
         buildStoreList()
@@ -258,6 +262,28 @@ class StockScheduling {
     companion object {
         val log = LoggerFactory.getLogger(this::class.java)
         private val OS_NAME = System.getProperty("os.name").lowercase()
+
+        fun md5(s: String): String {
+            val md = MessageDigest.getInstance("MD5")
+            return BigInteger(1, md.digest(s.toByteArray(Charsets.UTF_8)))
+                .toString(16).padStart(32, '0')
+        }
+    }
+
+    private fun isRestDay(): Boolean {
+        val f = File("latest")
+        val url = StoreListUrl.replace("{pageIndex}", "1")
+        val req = request(url)
+        val md5 = md5(req)
+        val flag = if (f.exists()) {
+            val text = FileUtils.readFileToString(f, Charsets.UTF_8)
+            f.delete()
+            md5 == text
+        } else {
+            return true
+        }
+        FileUtils.writeStringToFile(f, md5, Charsets.UTF_8)
+        return flag
     }
 
     fun getOSName(): EPlatform {

@@ -1,6 +1,8 @@
 package com.github.xsi640
 
+import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.runApplication
 import org.springframework.scheduling.annotation.EnableScheduling
 
@@ -9,5 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
 class Application
 
 fun main(args: Array<String>) {
-    runApplication<Application>(*args)
+    SpringApplicationBuilder(Application::class.java)
+        .web(WebApplicationType.NONE)
+        .run(*args)
 }
